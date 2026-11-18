@@ -1,0 +1,4 @@
+# images フォルダ内の画像は個人の写真・素材のためコミットしない
+# （フォルダ自体は .gitkeep で残す）
+images/*
+!images/.gitkeep
