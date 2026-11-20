@@ -434,17 +434,35 @@ const destinationImage = document.getElementById("destinationImage");
 const imageMessage = document.getElementById("imageMessage");
 const imagePathInput = document.getElementById("imagePath");
 const clearImageBtn = document.getElementById("clearImageBtn");
+const pickImageBtn = document.getElementById("pickImageBtn");
+const toggleUrlBtn = document.getElementById("toggleUrlBtn");
+
+// URL 入力欄の表示・非表示
+function showUrlInput(show) {
+  imagePathInput.hidden = !show;
+  toggleUrlBtn.setAttribute("aria-expanded", String(show));
+  toggleUrlBtn.classList.toggle("is-open", show);
+}
+
+pickImageBtn.addEventListener("click", () => imageFileInput.click());
+
+toggleUrlBtn.addEventListener("click", () => {
+  const show = imagePathInput.hidden;
+  showUrlInput(show);
+  if (show) imagePathInput.focus();
+});
 
 const IMAGE_MAX_SIZE = 800;   // 長辺の最大ピクセル数
 const IMAGE_QUALITY = 0.8;    // JPEG 画質（0〜1）
 
 function renderImage() {
   const path = travelData.destinationImagePath;
-  // 埋め込み画像（data:〜）は長いので入力欄には表示しない
-  imagePathInput.value = path.startsWith("data:") ? "" : path;
-  imagePathInput.placeholder = path.startsWith("data:")
-    ? "（選択したファイルの画像を保存中）"
-    : "例：https://example.com/photo.jpg（ファイル選択でも可）";
+  const isUrl = path !== "" && !path.startsWith("data:"); // data:〜 はファイルから取り込んだ画像
+  // URL で指定している画像のときだけ URL 欄を開いて表示する
+  imagePathInput.value = isUrl ? path : "";
+  showUrlInput(isUrl);
+  pickImageBtn.textContent = path ? "画像を変更" : "ファイルを選択";
+  clearImageBtn.hidden = !path;
 
   if (!path) {
     // 前の旅行の画像が残らないよう、読み込み先ごと消す

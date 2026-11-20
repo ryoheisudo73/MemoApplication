@@ -427,6 +427,31 @@ button:hover { opacity: 0.85; }
 
 .hint { font-size: 0.85rem; opacity: 0.75; margin: 4px 0; }
 
+/* ===== 行き先の画像の操作 ===== */
+.image-actions {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.image-actions input[type="text"] { flex: 1; min-width: 200px; }
+.image-actions .delete-btn { margin-left: auto; } /* 「画像を外す」は右端へ */
+
+/* 文字リンク風のボタン（URLで指定） */
+.link-btn {
+  background: transparent;
+  color: inherit;
+  padding: 4px 6px;
+  font-size: 0.9rem;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  opacity: 0.75;
+}
+.link-btn:hover,
+.link-btn.is-open { opacity: 1; }
+.link-btn.is-open { text-decoration: none; font-weight: bold; }
+
 /* ===== サムネイル ===== */
 .thumbnail { margin-top: 8px; }
 .thumbnail img {

@@ -73,15 +73,19 @@
         </select>
       </div>
       <div class="form-row">
-        <label for="imageFile">行き先の画像</label>
-        <input type="file" id="imageFile" accept="image/*">
+        <label for="pickImageBtn">行き先の画像</label>
+        <div class="image-actions">
+          <button type="button" id="pickImageBtn"
+            title="パソコン内のどのフォルダの画像でも選べます（縮小してこの旅行のデータとして保存）">ファイルを選択</button>
+          <button type="button" id="toggleUrlBtn" class="link-btn"
+            aria-expanded="false" aria-controls="imagePath">URLで指定</button>
+          <input type="text" id="imagePath" aria-label="画像のURL"
+            placeholder="https://… を入力して Enter" hidden>
+          <button type="button" id="clearImageBtn" class="delete-btn" hidden>画像を外す</button>
+        </div>
+        <!-- 実際のファイル選択欄は隠し、上の「ファイルを選択」ボタンから開く -->
+        <input type="file" id="imageFile" accept="image/*" hidden>
       </div>
-      <div class="form-row">
-        <label for="imagePath">画像のURL</label>
-        <input type="text" id="imagePath" placeholder="例：https://example.com/photo.jpg（ファイル選択でも可）">
-        <button type="button" id="clearImageBtn" class="delete-btn">画像を外す</button>
-      </div>
-      <p class="hint">※ パソコン内のどのフォルダの画像でも選べます。選んだ画像は縮小して、この旅行のデータとして保存されます。</p>
       <div class="thumbnail">
         <img id="destinationImage" alt="行き先のイメージ" hidden>
         <p id="imageMessage" class="hint">画像が未設定です</p>
