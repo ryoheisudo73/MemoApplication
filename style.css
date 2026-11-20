@@ -305,6 +305,33 @@ body.theme-kyoto-night .timeline { background: rgba(20, 30, 45, 0.75); }
 .timeline-dates { font-size: 0.8rem; opacity: 0.8; width: 100%; }
 .timeline-name { flex: 1; font-size: 0.95rem; word-break: break-word; }
 
+/* ===== 保存容量（フッター） ===== */
+.storage-usage {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+  font-size: 0.85rem;
+}
+.storage-bar {
+  width: 200px;
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(128, 128, 128, 0.25);
+  overflow: hidden;
+}
+.storage-bar-fill {
+  height: 100%;
+  width: 0;
+  background: var(--accent);
+  transition: width 0.3s;
+}
+.storage-bar-fill.is-warning { background: #e67e22; }
+.storage-bar-fill.is-danger  { background: #d9534f; }
+.storage-text { font-variant-numeric: tabular-nums; }
+
 /* 旅行の切り替えバー */
 .trip-bar {
   display: flex;

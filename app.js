@@ -68,10 +68,50 @@ function loadCurrentTrip() {
   return trip ? structuredClone(trip) : createTrip();
 }
 
+// ---------- 保存容量の使用率（画面最下部） ----------
+// ブラウザは残り容量を教えてくれないため、保存中の文字数から概算する。
+// 多くのブラウザの上限は 1サイトあたり 約500万文字（≒5MB）。
+const STORAGE_LIMIT = 5 * 1024 * 1024;
+
+function getStorageUsage() {
+  let used = 0;
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    used += key.length + (localStorage.getItem(key) || "").length;
+  }
+  return used;
+}
+
+function formatSize(chars) {
+  if (chars < 1024 * 1024) return (chars / 1024).toFixed(1) + " KB";
+  return (chars / 1024 / 1024).toFixed(2) + " MB";
+}
+
+function renderStorageUsage() {
+  const bar = document.getElementById("storageBar");
+  const fill = document.getElementById("storageBarFill");
+  const text = document.getElementById("storageText");
+  let used;
+  try {
+    used = getStorageUsage();
+  } catch (e) {
+    text.textContent = "取得できません";
+    return;
+  }
+  const percent = Math.min(100, (used / STORAGE_LIMIT) * 100);
+
+  fill.style.width = percent + "%";
+  // 70%以上で注意（オレンジ）、90%以上で警告（赤）
+  fill.className = "storage-bar-fill" + (percent >= 90 ? " is-danger" : percent >= 70 ? " is-warning" : "");
+  bar.setAttribute("aria-valuenow", percent.toFixed(1));
+  text.textContent = `${formatSize(used)} / 約5 MB（${percent < 0.1 && used > 0 ? "0.1未満" : percent.toFixed(1)}%）`;
+}
+
 // store を LocalStorage に書き込む
 function persistStore() {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(store));
+    renderStorageUsage();
     return true;
   } catch (e) {
     // LocalStorage の容量（ブラウザごとに約5MB）を超えた場合
@@ -717,3 +757,4 @@ function renderAll() {
 }
 
 renderAll();
+renderStorageUsage();
