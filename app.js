@@ -492,12 +492,15 @@ toggleUrlBtn.addEventListener("click", () => {
   if (show) imagePathInput.focus();
 });
 
-const IMAGE_MAX_SIZE = 800;   // 長辺の最大ピクセル数
-const IMAGE_QUALITY = 0.8;    // JPEG 画質（0〜1）
+// 画像の指定方法は2つだけ（LocalStorage には短い文字列しか保存しない）
+//   ③ ファイル選択：images/ フォルダ内の画像を選び、「images/ファイル名」を保存
+//   ④ URL 指定　　：画像の URL を保存
+const IMAGES_DIR = "images/";
 
 function renderImage() {
   const path = travelData.destinationImagePath;
-  const isUrl = path !== "" && !path.startsWith("data:"); // data:〜 はファイルから取り込んだ画像
+  // images/〜 はファイル選択、data:〜 は旧方式で埋め込んだ画像、それ以外は URL
+  const isUrl = path !== "" && !path.startsWith(IMAGES_DIR) && !path.startsWith("data:");
   // URL で指定している画像のときだけ URL 欄を開いて表示する
   imagePathInput.value = isUrl ? path : "";
   showUrlInput(isUrl);
@@ -512,7 +515,10 @@ function renderImage() {
     imageMessage.hidden = false;
     return;
   }
-  destinationImage.src = path;
+  // ファイル名に「#」「?」や空白が含まれても読み込めるよう、ファイル名部分をエンコード
+  destinationImage.src = path.startsWith(IMAGES_DIR)
+    ? IMAGES_DIR + encodeURIComponent(path.slice(IMAGES_DIR.length))
+    : path;
 }
 
 destinationImage.addEventListener("load", () => {
@@ -522,32 +528,12 @@ destinationImage.addEventListener("load", () => {
 
 destinationImage.addEventListener("error", () => {
   destinationImage.hidden = true;
-  imageMessage.textContent = "画像を読み込めませんでした。URL またはファイルを確認してください。";
+  const path = travelData.destinationImagePath;
+  imageMessage.textContent = path.startsWith(IMAGES_DIR)
+    ? `「${path}」が見つかりません。その画像を images フォルダに入れてください。`
+    : "画像を読み込めませんでした。URL を確認してください。";
   imageMessage.hidden = false;
 });
-
-// 選択した画像を縮小し、data URL（画像そのものを文字列化したもの）に変換する
-// ※ ブラウザではファイルのフルパスを取得できないため、画像データ自体を保存する
-function resizeImage(file) {
-  return new Promise((resolve, reject) => {
-    const url = URL.createObjectURL(file);
-    const img = new Image();
-    img.onload = () => {
-      const scale = Math.min(1, IMAGE_MAX_SIZE / Math.max(img.width, img.height));
-      const canvas = document.createElement("canvas");
-      canvas.width = Math.round(img.width * scale);
-      canvas.height = Math.round(img.height * scale);
-      canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
-      URL.revokeObjectURL(url);
-      resolve(canvas.toDataURL("image/jpeg", IMAGE_QUALITY));
-    };
-    img.onerror = () => {
-      URL.revokeObjectURL(url);
-      reject(new Error("画像を読み込めませんでした"));
-    };
-    img.src = url;
-  });
-}
 
 function setImagePath(path) {
   travelData.destinationImagePath = path;
@@ -555,15 +541,12 @@ function setImagePath(path) {
   renderImage();
 }
 
-imageFileInput.addEventListener("change", async () => {
+// ③ ファイル選択：ブラウザではフルパスが取れないため、ファイル名だけを images/ と結合する
+imageFileInput.addEventListener("change", () => {
   const file = imageFileInput.files[0];
-  if (!file) return;
-  try {
-    setImagePath(await resizeImage(file));
-  } catch (e) {
-    alert(e.message);
-  }
   imageFileInput.value = "";
+  if (!file) return;
+  setImagePath(IMAGES_DIR + file.name);
 });
 
 // URL / パスの直接入力（入力確定時に反映）
