@@ -73,23 +73,21 @@
         </select>
       </div>
       <div class="form-row">
-        <label for="pickImageBtn">行き先の画像</label>
+        <label for="searchImageBtn">行き先の画像</label>
         <div class="image-actions">
-          <button type="button" id="pickImageBtn"
-            title="アプリの images フォルダに入れた画像を選んでください（ファイル名だけを保存します）">ファイルを選択</button>
-          <button type="button" id="toggleUrlBtn" class="link-btn"
-            aria-expanded="false" aria-controls="imagePath">URLで指定</button>
-          <input type="text" id="imagePath" aria-label="画像のURL"
-            placeholder="https://… を入力して Enter" hidden>
-          <button type="button" id="clearImageBtn" class="delete-btn" hidden>画像を外す</button>
+          <!-- 行き先名で Google 画像検索を別タブで開く -->
+          <button type="button" id="searchImageBtn">画像を探す（Google）</button>
+          <!-- コピーした画像アドレスを貼り付けると追加される -->
+          <input type="text" id="imageUrlInput" aria-label="画像のURL"
+            placeholder="画像アドレスを貼り付け（https://…）">
         </div>
-        <!-- 実際のファイル選択欄は隠し、上の「ファイルを選択」ボタンから開く -->
-        <input type="file" id="imageFile" accept="image/*" hidden>
       </div>
-      <div class="thumbnail">
-        <img id="destinationImage" alt="行き先のイメージ" hidden>
-        <p id="imageMessage" class="hint">画像が未設定です</p>
-      </div>
+      <p id="imageGuide" class="image-guide" hidden>
+        Google の画面で画像をクリックして大きく表示し、<b>右クリック →「画像アドレスをコピー」</b>。
+        この画面に戻って上の欄に貼り付けると追加されます。
+      </p>
+      <!-- 画像の一覧（高さ固定。枚数が増えるほど1枚ずつ小さく並ぶ） -->
+      <ul id="imageGallery" class="image-gallery"></ul>
     </section>
 
     <!-- 目的別リスト -->

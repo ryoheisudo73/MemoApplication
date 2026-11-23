@@ -463,30 +463,99 @@ button:hover { opacity: 0.85; }
   gap: 8px;
 }
 .image-actions input[type="text"] { flex: 1; min-width: 200px; }
-.image-actions .delete-btn { margin-left: auto; } /* 「画像を外す」は右端へ */
 
-/* 文字リンク風のボタン（URLで指定） */
-.link-btn {
-  background: transparent;
-  color: inherit;
-  padding: 4px 6px;
-  font-size: 0.9rem;
-  text-decoration: underline;
-  text-underline-offset: 3px;
-  opacity: 0.75;
+/* Google から画像アドレスを持ってくる手順の案内 */
+.image-guide {
+  margin: 0 0 10px;
+  padding: 8px 12px;
+  border-left: 3px solid var(--accent);
+  border-radius: 4px;
+  background: rgba(128, 128, 128, 0.12);
+  font-size: 0.85rem;
 }
-.link-btn:hover,
-.link-btn.is-open { opacity: 1; }
-.link-btn.is-open { text-decoration: none; font-weight: bold; }
 
-/* ===== サムネイル ===== */
-.thumbnail { margin-top: 8px; }
-.thumbnail img {
-  display: block;
-  max-width: 100%;
-  max-height: 300px;
+/* ===== 画像ギャラリー =====
+   エリアの高さは固定。枚数に応じて JS が列数・行数を決め、
+   増えるほど1枚ずつが小さくなってエリア内に収まる */
+.image-gallery {
+  --cols: 1; /* JS で設定 */
+  --rows: 1; /* JS で設定 */
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  height: 320px;
+  display: grid;
+  grid-template-columns: repeat(var(--cols), 1fr);
+  grid-template-rows: repeat(var(--rows), 1fr);
+  gap: 6px;
+}
+@media (max-width: 600px) {
+  .image-gallery { height: 240px; }
+}
+.gallery-item {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
   border-radius: 8px;
+  overflow: hidden;
+  background: rgba(128, 128, 128, 0.15);
+}
+/* 画像がないとき：エリアいっぱいの枠に案内文 */
+.gallery-empty {
+  grid-column: 1 / -1;
+  grid-row: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px dashed rgba(128, 128, 128, 0.4);
+  border-radius: 8px;
+  font-size: 0.9rem;
+  opacity: 0.7;
+}
+
+.gallery-item a {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  color: inherit;
+  font-size: 0.8rem;
+  text-decoration: none;
+  opacity: 0.9;
+}
+.gallery-item img {
+  width: 100%;
+  height: 100%;
   object-fit: cover;
+  display: block;
+  transition: transform 0.2s;
+}
+.gallery-item a:hover img { transform: scale(1.04); }
+.gallery-item.is-broken img { display: none; }
+
+/* 右上の × ボタン（マウスを載せたときだけ表示） */
+.gallery-delete {
+  opacity: 0;
+  transition: opacity 0.15s, background 0.15s;
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  font-size: 1rem;
+  line-height: 26px;
+}
+.gallery-item:hover .gallery-delete,
+.gallery-item:focus-within .gallery-delete { opacity: 1; } /* キーボード操作時も表示 */
+.gallery-delete:hover { background: #d9534f; opacity: 1; }
+/* スマホなどマウスのない端末では常に表示 */
+@media (hover: none) {
+  .gallery-delete { opacity: 1; }
 }
 
 /* ===== リスト ===== */

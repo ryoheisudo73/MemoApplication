@@ -19,7 +19,10 @@ Local Travelerアプリ（Memoアプリ応用）
       "startDate": "2026-12-20",
       "endDate": "2026-12-25",
       "themeStyle": "theme-night-city",
-      "destinationImagePath": "images/jiufen.jpg",
+      "destinationImages": [
+        "https://example.com/jiufen-1.jpg",
+        "https://example.com/jiufen-2.jpg"
+      ],
       "activities": ["夜市で食べ歩き", "十分でランタンを飛ばす"],
       "restaurants": ["鼎泰豊 信義本店", "阿宗麺線"],
       "shops": ["カルフール", "誠品書店"],
@@ -46,7 +49,7 @@ Local Travelerアプリ（Memoアプリ応用）
 - PW: 今回はなし
 
 ## ⑤工夫した点・こだわった点
-- 画像をLocal Strageに保存するとたくさん容量を消費してしまうので、パス（または画像URL）のみを保存するようにしました（ただしサブフォルダ（/imagesフォルダ）の中のファイルしか使えない）。
+- 画像をLocal Strageに保存するとたくさん容量を消費してしまうので、画像URLのみを保存するようにしました。「画像を探す（Google）」ボタンで行き先名のGoogle画像検索を開き、コピーした画像アドレスを貼り付けると、行き先ごとに何枚でも追加できます（枚数が増えると1枚ずつ小さく表示）。
 - スタイルについても、旅の行き先ごとに選べるようにしていますが、こちらも容量を抑えるために、スタイル指定のテキストのみをLocal Strageで保管する作りにしました
 - Local Strageの容量もわかるようにしました。
 

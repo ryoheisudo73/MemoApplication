@@ -5,8 +5,8 @@
 // 保存形式:
 // {
 //   "currentTripId": "1700000000000",
-//   "trips": [ { id, destination, themeStyle, destinationImagePath,
-//                activities, restaurants, shops, prepTasks }, ... ]
+//   "trips": [ { id, destination, startDate, endDate, themeStyle,
+//                destinationImages, activities, restaurants, shops, prepTasks }, ... ]
 // }
 // =====================================================
 
@@ -22,12 +22,26 @@ function createTrip() {
     startDate: "", // 出発日 "YYYY-MM-DD"
     endDate: "",   // 帰着日 "YYYY-MM-DD"
     themeStyle: "",
-    destinationImagePath: "",
+    destinationImages: [], // 行き先の画像の URL（複数）
     activities: [],
     restaurants: [],
     shops: [],
     prepTasks: [],
   };
+}
+
+// 保存データを最新の形にそろえる
+function normalizeTrip(saved) {
+  const trip = { ...createTrip(), ...saved };
+  // 旧形式の画像（destinationImagePath：1枚だけ）を destinationImages に移す。
+  // URL 以外（images/〜 や 画像データそのものの data:〜）は使わなくなったため引き継がない
+  if (trip.destinationImagePath) {
+    if (/^https?:\/\//.test(trip.destinationImagePath)) {
+      trip.destinationImages = [trip.destinationImagePath, ...trip.destinationImages];
+    }
+  }
+  delete trip.destinationImagePath;
+  return trip;
 }
 
 // store      : LocalStorage に「登録済み」のデータ
@@ -43,14 +57,14 @@ function loadStore() {
     if (json) {
       const data = JSON.parse(json);
       // 足りない項目はデフォルト値で補う
-      data.trips = data.trips.map((t) => ({ ...createTrip(), ...t }));
+      data.trips = data.trips.map(normalizeTrip);
       return data;
     }
 
     // 旧形式（travelData）があれば、1件目の旅行として引き継ぐ
     const oldJson = localStorage.getItem(OLD_STORAGE_KEY);
     if (oldJson) {
-      const trip = { ...createTrip(), ...JSON.parse(oldJson) };
+      const trip = normalizeTrip(JSON.parse(oldJson));
       const migrated = { currentTripId: trip.id, trips: [trip] };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(migrated));
       localStorage.removeItem(OLD_STORAGE_KEY);
@@ -468,95 +482,142 @@ function renderTimeline() {
   });
 }
 
-// ---------- ② 行き先画像 ----------
-const imageFileInput = document.getElementById("imageFile");
-const destinationImage = document.getElementById("destinationImage");
-const imageMessage = document.getElementById("imageMessage");
-const imagePathInput = document.getElementById("imagePath");
-const clearImageBtn = document.getElementById("clearImageBtn");
-const pickImageBtn = document.getElementById("pickImageBtn");
-const toggleUrlBtn = document.getElementById("toggleUrlBtn");
+// ---------- ② 行き先画像（URL で複数登録） ----------
+// LocalStorage には画像の URL だけを保存する（画像データそのものは保存しない）。
+//
+// ※ ブラウザのセキュリティの仕組みにより、Google の画面でどの画像をクリックしたかを
+//    このアプリから知ることはできない。そのため、Google 画像検索を別タブで開き、
+//    ユーザーがコピーした「画像アドレス」を貼り付けてもらう方式にしている。
+const searchImageBtn = document.getElementById("searchImageBtn");
+const imageUrlInput = document.getElementById("imageUrlInput");
+const imageGuide = document.getElementById("imageGuide");
+const imageGallery = document.getElementById("imageGallery");
 
-// URL 入力欄の表示・非表示
-function showUrlInput(show) {
-  imagePathInput.hidden = !show;
-  toggleUrlBtn.setAttribute("aria-expanded", String(show));
-  toggleUrlBtn.classList.toggle("is-open", show);
-}
-
-pickImageBtn.addEventListener("click", () => imageFileInput.click());
-
-toggleUrlBtn.addEventListener("click", () => {
-  const show = imagePathInput.hidden;
-  showUrlInput(show);
-  if (show) imagePathInput.focus();
-});
-
-// 画像の指定方法は2つだけ（LocalStorage には短い文字列しか保存しない）
-//   ③ ファイル選択：images/ フォルダ内の画像を選び、「images/ファイル名」を保存
-//   ④ URL 指定　　：画像の URL を保存
-const IMAGES_DIR = "images/";
-
-function renderImage() {
-  const path = travelData.destinationImagePath;
-  // images/〜 はファイル選択、data:〜 は旧方式で埋め込んだ画像、それ以外は URL
-  const isUrl = path !== "" && !path.startsWith(IMAGES_DIR) && !path.startsWith("data:");
-  // URL で指定している画像のときだけ URL 欄を開いて表示する
-  imagePathInput.value = isUrl ? path : "";
-  showUrlInput(isUrl);
-  pickImageBtn.textContent = path ? "画像を変更" : "ファイルを選択";
-  clearImageBtn.hidden = !path;
-
-  if (!path) {
-    // 前の旅行の画像が残らないよう、読み込み先ごと消す
-    destinationImage.removeAttribute("src");
-    destinationImage.hidden = true;
-    imageMessage.textContent = "画像が未設定です";
-    imageMessage.hidden = false;
+// Google 画像検索を開く
+searchImageBtn.addEventListener("click", () => {
+  const keyword = travelData.destination.trim();
+  if (!keyword) {
+    alert("先に「行き先」を入力してください。");
+    destinationInput.focus();
     return;
   }
-  // ファイル名に「#」「?」や空白が含まれても読み込めるよう、ファイル名部分をエンコード
-  destinationImage.src = path.startsWith(IMAGES_DIR)
-    ? IMAGES_DIR + encodeURIComponent(path.slice(IMAGES_DIR.length))
-    : path;
+  const url = "https://www.google.com/search?tbm=isch&q=" + encodeURIComponent(keyword);
+  window.open(url, "_blank", "noopener");
+  imageGuide.hidden = false;
+  waitingForImage = true;
+});
+
+// Google のタブから戻ってきたら、貼り付け欄にカーソルを置く
+let waitingForImage = false;
+window.addEventListener("focus", () => {
+  if (waitingForImage) imageUrlInput.focus();
+});
+
+// 貼り付けた文字列が画像の URL として使えるかチェックし、問題があれば理由を返す
+function checkImageUrl(text) {
+  if (text.startsWith("data:")) {
+    // Google の検索結果一覧の小さな画像は、URL ではなく画像データそのもの（data:〜）になっている
+    return "検索結果一覧の小さな画像ではなく、クリックして大きく表示された画像の「画像アドレス」をコピーしてください。";
+  }
+  try {
+    const url = new URL(text);
+    if (url.protocol !== "https:" && url.protocol !== "http:") throw new Error();
+  } catch {
+    return "画像の URL（https://〜）を貼り付けてください。";
+  }
+  if (travelData.destinationImages.includes(text)) return "その画像はすでに追加されています。";
+  return null;
 }
 
-destinationImage.addEventListener("load", () => {
-  destinationImage.hidden = false;
-  imageMessage.hidden = true;
-});
-
-destinationImage.addEventListener("error", () => {
-  destinationImage.hidden = true;
-  const path = travelData.destinationImagePath;
-  imageMessage.textContent = path.startsWith(IMAGES_DIR)
-    ? `「${path}」が見つかりません。その画像を images フォルダに入れてください。`
-    : "画像を読み込めませんでした。URL を確認してください。";
-  imageMessage.hidden = false;
-});
-
-function setImagePath(path) {
-  travelData.destinationImagePath = path;
+function addImageUrl(text) {
+  const url = text.trim();
+  if (!url) return;
+  const problem = checkImageUrl(url);
+  if (problem) {
+    alert(problem);
+    return;
+  }
+  travelData.destinationImages.push(url);
+  imageUrlInput.value = "";
+  waitingForImage = false;
+  imageGuide.hidden = true;
   markDirty();
-  renderImage();
+  renderImages();
 }
 
-// ③ ファイル選択：ブラウザではフルパスが取れないため、ファイル名だけを images/ と結合する
-imageFileInput.addEventListener("change", () => {
-  const file = imageFileInput.files[0];
-  imageFileInput.value = "";
-  if (!file) return;
-  setImagePath(IMAGES_DIR + file.name);
+// 貼り付けたらすぐ追加（Enter でも追加できる）
+imageUrlInput.addEventListener("paste", (e) => {
+  e.preventDefault();
+  addImageUrl(e.clipboardData.getData("text"));
+});
+imageUrlInput.addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && !e.isComposing) addImageUrl(imageUrlInput.value);
 });
 
-// URL / パスの直接入力（入力確定時に反映）
-imagePathInput.addEventListener("change", () => {
-  setImagePath(imagePathInput.value.trim());
-});
+// 高さ固定のエリアに収まるよう、枚数とエリアの縦横比から列数・行数を決める
+// （1枚ずつがなるべく正方形に近くなる並べ方。枚数が増えるほど小さくなる）
+function layoutGallery() {
+  const count = Math.max(1, travelData.destinationImages.length);
+  const ratio = imageGallery.clientWidth / imageGallery.clientHeight || 1;
+  const cols = Math.min(count, Math.max(1, Math.round(Math.sqrt(count * ratio))));
+  const rows = Math.ceil(count / cols);
+  imageGallery.style.setProperty("--cols", cols);
+  imageGallery.style.setProperty("--rows", rows);
+}
 
-clearImageBtn.addEventListener("click", () => {
-  setImagePath("");
-});
+// 画面の幅が変わったら並べ直す
+new ResizeObserver(layoutGallery).observe(imageGallery);
+
+function renderImages() {
+  const images = travelData.destinationImages;
+  imageGallery.innerHTML = "";
+  layoutGallery();
+
+  if (images.length === 0) {
+    const li = document.createElement("li");
+    li.className = "gallery-empty";
+    li.textContent = "画像が未設定です";
+    imageGallery.appendChild(li);
+    return;
+  }
+
+  images.forEach((url, index) => {
+    const li = document.createElement("li");
+    li.className = "gallery-item";
+
+    // クリックで元の画像を別タブで開く
+    const link = document.createElement("a");
+    link.href = url;
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+
+    const img = document.createElement("img");
+    img.src = url;
+    img.alt = `${tripLabel(travelData)} の画像 ${index + 1}`;
+    img.loading = "lazy";
+    img.referrerPolicy = "no-referrer"; // 他サイトの画像の表示拒否を減らす
+    img.addEventListener("error", () => {
+      li.classList.add("is-broken");
+      link.textContent = "画像を読み込めません";
+    });
+    link.appendChild(img);
+
+    const del = document.createElement("button");
+    del.type = "button";
+    del.className = "gallery-delete";
+    del.textContent = "×";
+    del.title = "この画像を外す";
+    del.setAttribute("aria-label", "この画像を外す");
+    del.addEventListener("click", () => {
+      travelData.destinationImages.splice(index, 1);
+      markDirty();
+      renderImages();
+    });
+
+    li.append(link, del);
+    imageGallery.appendChild(li);
+  });
+}
 
 // ---------- 目的別リスト（やりたいこと / レストラン / お店） ----------
 const LIST_KEYS = ["activities", "restaurants", "shops"];
@@ -728,11 +789,13 @@ function renderAll() {
   destinationInput.value = travelData.destination;
   renderDates();
   renderTripSummary();
-  imageFileInput.value = ""; // 前の旅行で選んだファイル名をクリア
+  imageUrlInput.value = "";
+  imageGuide.hidden = true;
+  waitingForImage = false;
   taskForm.reset();
   themeSelect.value = travelData.themeStyle;
   applyTheme(travelData.themeStyle);
-  renderImage();
+  renderImages();
   LIST_KEYS.forEach(renderList);
   renderTasks();
   renderAlert();
